@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Keybinding cheat sheet (Super+K), read live from Hyprland
+hyprctl binds -j | python3 -I -c '
+import json, sys
+mods = [(64,"SUPER"),(4,"CTRL"),(8,"ALT"),(1,"SHIFT")]
+names = {"code:10":"1","code:11":"2","code:12":"3","code:13":"4","code:14":"5","code:15":"6",
+         "code:16":"7","code:17":"8","code:18":"9","code:19":"0","code:20":"-","code:21":"=",
+         "mouse:272":"LMB","mouse:273":"RMB","grave":"`","comma":","}
+seen = set()
+for b in json.load(sys.stdin):
+    d = b.get("description") or ""
+    if not d: continue
+    keys = [n for m,n in mods if b["modmask"] & m]
+    keys.append(names.get(b["key"], b["key"].upper() if len(b["key"]) == 1 else b["key"]))
+    k = " + ".join(keys)
+    if (k, d) in seen: continue
+    seen.add((k, d))
+    print(f"{k:<28} {d}")
+' | rofi -dmenu -i -theme-str 'entry { placeholder: "Keybindings…"; } window { width: 720px; } listview { lines: 14; } element { padding: 6px 8px; }' >/dev/null

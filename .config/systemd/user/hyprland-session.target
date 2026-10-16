@@ -1,0 +1,5 @@
+[Unit]
+Description=Hyprland session (marks the graphical session as running for portals etc.)
+BindsTo=graphical-session.target
+Wants=graphical-session-pre.target
+After=graphical-session-pre.target

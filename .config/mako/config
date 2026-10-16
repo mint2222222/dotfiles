@@ -1,0 +1,27 @@
+# Gruvbox, square
+font=JetBrains Mono 11
+background-color=#282828
+text-color=#ebdbb2
+border-color=#ebdbb2
+border-size=2
+border-radius=0
+width=320
+padding=10
+margin=10
+default-timeout=5000
+max-icon-size=32
+
+[urgency=low]
+border-color=#504945
+
+[urgency=critical]
+border-color=#cc241d
+default-timeout=0
+
+[mode=do-not-disturb]
+invisible=1
+
+[app-name=volume]
+border-color=#ebdbb2
+progress-color=over #504945
+width=220

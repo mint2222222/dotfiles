@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# volume up|down [step]  |  volume mute
+# Goes up to 150%, and shows a small Gruvbox pop-up (bar is full at 150%).
+MAX=1.5
+STEP="${2:-5}"
+SINK=@DEFAULT_AUDIO_SINK@
+ID_FILE="${XDG_RUNTIME_DIR:-/tmp}/volume-notify-id"
+
+case "$1" in
+    up)   wpctl set-volume -l "$MAX" "$SINK" "${STEP}%+" ;;
+    down) wpctl set-volume "$SINK" "${STEP}%-" ;;
+    mute) wpctl set-mute "$SINK" toggle ;;
+esac
+
+out=$(wpctl get-volume "$SINK")                    # e.g. "Volume: 1.25 [MUTED]"
+vol=$(awk '{printf "%d", $2 * 100 + 0.5}' <<<"$out")
+if [[ $out == *MUTED* ]]; then text="muted"; else text="${vol}%"; fi
+
+id=$(cat "$ID_FILE" 2>/dev/null)
+id=$(notify-send -p -a volume -u low -t 1500 ${id:+-r "$id"} \
+        -h "int:value:$(( vol * 100 / 150 ))" "Volume" "$text") && echo "$id" > "$ID_FILE"

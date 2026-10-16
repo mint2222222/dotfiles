@@ -1,0 +1,99 @@
+/* Omarchy-style app launcher, Gruvbox (Omarchy's own gruvbox palette) */
+@theme "/dev/null"   /* start from a blank theme, no rofi defaults */
+
+configuration {
+    modi:                "drun";
+    show-icons:          true;
+    display-drun:        "";
+    drun-display-format: "{name}";
+    font:                "JetBrains Mono 12";
+}
+
+* {
+    bg:        #282828;
+    fg:        #d4be98;
+    accent:    #7daea3;
+    faded:     #d4be9894;   /* placeholder text, 58% */
+    selected:  #d4be9814;   /* selected row, 8% */
+
+    background-color: transparent;
+    text-color:       @fg;
+    border:           0;
+    margin:           0;
+    padding:          0;
+    spacing:          0;
+}
+
+window {
+    location:         center;
+    anchor:           center;
+    width:            300px;
+    background-color: @bg;
+    border:           2px;
+    border-color:     @fg;
+    border-radius:    0;
+    padding:          18px;
+}
+
+mainbox {
+    spacing:  12px;
+    children: [ inputbar, listview ];
+}
+
+inputbar {
+    children: [ entry ];
+    padding:  6px 4px;
+}
+
+entry {
+    font:              "JetBrains Mono 16";
+    placeholder:       "Apps…";
+    placeholder-color: @faded;
+    text-color:        @fg;
+    cursor:            text;
+}
+
+listview {
+    lines:        8;
+    spacing:      4px;
+    scrollbar:    false;
+    fixed-height: false;
+    dynamic:      true;
+}
+
+element {
+    padding:      12px 8px;
+    spacing:      12px;
+    border:       0 0 0 4px;
+    border-color: transparent;
+    border-radius: 0;
+}
+
+element normal.normal,
+element normal.active,
+element normal.urgent,
+element alternate.normal,
+element alternate.active,
+element alternate.urgent {
+    background-color: transparent;
+    text-color:       @fg;
+}
+
+element selected.normal,
+element selected.active,
+element selected.urgent {
+    background-color: @selected;
+    border-color:     @selected;
+    text-color:       @accent;
+}
+
+element-icon {
+    size: 18px;
+    vertical-align: 0.5;
+}
+
+element-text {
+    text-color:     inherit;
+    highlight:      none;
+    vertical-align: 0.5;
+}

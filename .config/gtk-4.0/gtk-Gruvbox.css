@@ -1,0 +1,61 @@
+/* Gruvbox dark for GTK4 / libadwaita apps (Nautilus etc.)
+   Used only in Hyprland; GNOME switches back to MacTahoe (gtk-Dark.css). */
+:root {
+  --accent-bg-color: #ebdbb2;
+  --accent-fg-color: #282828;
+  --accent-color: #ebdbb2;
+
+  --destructive-bg-color: #cc241d;
+  --destructive-fg-color: #ebdbb2;
+  --destructive-color: #fb4934;
+  --success-bg-color: #98971a;
+  --success-fg-color: #282828;
+  --success-color: #b8bb26;
+  --warning-bg-color: #d79921;
+  --warning-fg-color: #282828;
+  --warning-color: #fabd2f;
+  --error-bg-color: #cc241d;
+  --error-fg-color: #ebdbb2;
+  --error-color: #fb4934;
+
+  --window-bg-color: #282828;
+  --window-fg-color: #ebdbb2;
+  --view-bg-color: #282828;
+  --view-fg-color: #ebdbb2;
+
+  --headerbar-bg-color: #3c3836;
+  --headerbar-fg-color: #ebdbb2;
+  --headerbar-border-color: #ebdbb2;
+  --headerbar-backdrop-color: #32302f;
+  --headerbar-shade-color: rgb(0 0 0 / 36%);
+  --headerbar-darker-shade-color: rgb(0 0 0 / 50%);
+
+  --sidebar-bg-color: #32302f;
+  --sidebar-fg-color: #ebdbb2;
+  --sidebar-backdrop-color: #32302f;
+  --sidebar-border-color: #1d2021;
+  --sidebar-shade-color: rgb(0 0 0 / 25%);
+  --secondary-sidebar-bg-color: #32302f;
+  --secondary-sidebar-fg-color: #ebdbb2;
+  --secondary-sidebar-backdrop-color: #32302f;
+  --secondary-sidebar-border-color: #1d2021;
+  --secondary-sidebar-shade-color: rgb(0 0 0 / 25%);
+
+  --card-bg-color: rgb(235 219 178 / 5%);
+  --card-fg-color: #ebdbb2;
+  --card-shade-color: rgb(0 0 0 / 36%);
+  --thumbnail-bg-color: #3c3836;
+  --thumbnail-fg-color: #ebdbb2;
+  --dialog-bg-color: #3c3836;
+  --dialog-fg-color: #ebdbb2;
+  --popover-bg-color: #3c3836;
+  --popover-fg-color: #ebdbb2;
+  --popover-shade-color: rgb(0 0 0 / 25%);
+  --shade-color: rgb(0 0 0 / 25%);
+  --scrollbar-outline-color: rgb(0 0 0 / 50%);
+}
+
+/* square windows to match Hyprland */
+window, window.csd, window.background, dialog, .dialog-sheet, popover > contents {
+  border-radius: 0;
+}

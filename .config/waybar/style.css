@@ -1,0 +1,64 @@
+/* bar background lives in bar-bg.css so it can be toggled (waybar-bg) */
+@import "bar-bg.css";
+
+/* Gruvbox, square, dwm-like */
+@define-color bg     #282828;
+@define-color bg1    #3c3836;
+@define-color bg2    #504945;
+@define-color fg     #ebdbb2;
+@define-color gray   #928374;
+@define-color yellow #d79921;
+@define-color red    #cc241d;
+@define-color accent #ebdbb2;
+
+* {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12px;
+    font-weight: bold;
+    border: none;
+    border-radius: 0;
+    min-height: 0;
+    padding: 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+window#waybar {
+    color: @fg;
+}
+
+/* tags */
+#workspaces button {
+    padding: 0 8px;
+    color: @gray;
+    background: transparent;
+    transition: none;
+}
+#workspaces button.empty  { color: #665c54; }
+#workspaces button.active { background: @accent; color: @bg; }
+#workspaces button.urgent { background: @red; color: @fg; }
+#workspaces button:hover  { background: @bg1; color: @fg; box-shadow: none; text-shadow: none; }
+
+/* title, highlighted like dwm's selected bar */
+#window {
+    padding: 0 10px;
+    background: @bg2;
+    color: @fg;
+}
+window#waybar.empty #window { background: transparent; }
+
+/* status blocks: cream tiles like the clock */
+#cpu, #memory, #wireplumber, #network, #battery, #clock, #tray {
+    padding: 0 10px;
+    background: @accent;
+    color: @bg;
+}
+/* joined into one strip, thin darker-cream dividers */
+#memory, #wireplumber, #network, #battery, #tray { border-left: 1px solid #bdae93; }
+#clock { padding: 0 12px; }
+#battery.warning  { background: @yellow; color: @bg; }
+#battery.critical { background: @red; color: @fg; }
+#wireplumber.muted, #network.disconnected { background: @gray; color: @bg; }
+
+tooltip { background: @bg; border: 2px solid @fg; border-radius: 0; }
+tooltip label { color: @fg; }

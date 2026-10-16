@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Toggle the Waybar background between Gruvbox and transparent.
+# In transparent mode the bare text gets a dark outline so it stays readable.
+F="$HOME/.config/waybar/bar-bg.css"
+if grep -q transparent "$F"; then
+    echo 'window#waybar { background: #3c3836; }' > "$F"
+else
+    cat > "$F" <<'CSS'
+window#waybar { background: transparent; }
+/* workspace tags become cream tiles, like the status tiles */
+window#waybar #workspaces button        { background: #ebdbb2; color: #3c3836; margin-right: 4px; }
+window#waybar #workspaces button.empty  { background: #ebdbb2; color: #a89984; }
+window#waybar #workspaces button.active { background: #3c3836; color: #ebdbb2; }
+window#waybar #workspaces button.urgent { background: #cc241d; color: #ebdbb2; }
+window#waybar #workspaces button:hover  { background: #d5c4a1; color: #282828; }
+window#waybar #window {
+    text-shadow: 1px 0 #1d2021, -1px 0 #1d2021, 0 1px #1d2021, 0 -1px #1d2021,
+                 1px 1px #1d2021, -1px -1px #1d2021, 1px -1px #1d2021, -1px 1px #1d2021;
+}
+CSS
+fi
+pkill -SIGUSR2 -x waybar   # reload style without restarting

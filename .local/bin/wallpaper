@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# wallpaper            -> pick a wallpaper with rofi (image grid)
+# wallpaper --restore  -> re-apply the last one (used at login)
+DIR="$HOME/Pictures/gruvbox"
+LINK="$HOME/.config/hypr/wallpaper"
+THUMBS="$HOME/.cache/wallpaper-thumbs"
+
+apply() {
+    pkill -x swaybg
+    if [ -e "$LINK" ]; then
+        setsid -f swaybg -i "$LINK" -m fill >/dev/null 2>&1
+    else
+        setsid -f swaybg -c '#282828' >/dev/null 2>&1
+    fi
+}
+
+if [ "$1" = "--restore" ]; then
+    apply
+    exit
+fi
+
+mkdir -p "$THUMBS"
+
+# small cached thumbnails, only made once per image
+list() {
+    find "$DIR" -maxdepth 1 -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' \) -printf '%f\n' | sort |
+    while IFS= read -r f; do
+        t="$THUMBS/${f%.*}.jpg"
+        [ -f "$t" ] || magick "$DIR/$f[0]" -thumbnail 400x225^ -gravity center -extent 400x225 -quality 85 "$t" 2>/dev/null
+        printf '%s\0icon\x1f%s\n' "$f" "$t"
+    done
+}
+
+choice=$(list | rofi -dmenu -i -show-icons -theme-str '
+    window       { width: 1000px; }
+    entry        { placeholder: "Wallpapers…"; }
+    listview     { columns: 4; lines: 3; spacing: 10px; flow: horizontal; }
+    element      { orientation: vertical; padding: 8px; spacing: 6px; border: 0; }
+    element-icon { size: 200px; }
+    element-text { horizontal-align: 0.5; font: "JetBrains Mono 9"; }
+') || exit 0
+
+[ -n "$choice" ] && ln -sfn "$DIR/$choice" "$LINK" && apply

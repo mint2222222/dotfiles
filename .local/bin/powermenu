@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# System menu (Super+Escape), Omarchy-style
+choice=$(printf '%s\n' "Lock" "Suspend" "Log out" "Restart" "Shut down" |
+    rofi -dmenu -i -theme-str 'entry { placeholder: "System…"; } listview { lines: 5; }') || exit 0
+case "$choice" in
+    "Lock")      loginctl lock-session ;;
+    "Suspend")   systemctl suspend ;;
+    "Log out")   hyprctl dispatch 'hl.dsp.exit()' ;;
+    "Restart")   systemctl reboot ;;
+    "Shut down") systemctl poweroff ;;
+esac

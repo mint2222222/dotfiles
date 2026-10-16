@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+# gtk-theme-switch gruvbox   -> Hyprland
+# gtk-theme-switch mactahoe  -> GNOME
+D="$HOME/.config/gtk-4.0"
+case "$1" in
+    gruvbox)  ln -sfn "$D/gtk-Gruvbox.css" "$D/gtk.css"; ln -sfn "$D/gtk-Gruvbox.css" "$D/gtk-dark.css" ;;
+    mactahoe) ln -sfn "$D/gtk-Dark.css"    "$D/gtk.css"; ln -sfn "$D/gtk-Dark.css"    "$D/gtk-dark.css" ;;
+esac

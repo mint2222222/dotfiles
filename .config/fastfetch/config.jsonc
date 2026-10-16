@@ -1,0 +1,71 @@
+//   _____ _____ _____ _____ _____ _____ _____ _____ _____
+//  |   __|  _  |   __|_   _|   __|   __|_   _|     |  |  |
+//  |   __|     |__   | | | |   __|   __| | | |   --|     |
+//  |__|  |__|__|_____| |_| |__|  |_____| |_| |_____|__|__|  HYPRLAND
+//
+//  by Bina
+//
+//  Colours taken from the logo image:
+//    cream #fdf8d8  -> keys / title
+//    grey  #494949  -> colour strip (lines use gruvbox #665c54 so they show on the blur)
+//    gruvbox #a89984 -> values
+
+{
+    "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+    "logo": {
+        "source": "/home/mint/Pictures/gruvbox/fstfech.png",
+        "type": "kitty",
+        "height": 18,
+        "padding": {
+            "top": 1,
+            "left": 2,
+            "right": 4
+        }
+    },
+    "display": {
+        "separator": "  ",
+        "color": {
+            "keys": "1;38;2;253;248;216",
+            "title": "1;38;2;253;248;216",
+            "output": "38;2;168;153;132",
+            "separator": "38;2;73;73;73"
+        },
+        "key": {
+            "width": 10
+        }
+    },
+    "modules": [
+        "break",
+        "break",
+        {
+            "type": "title",
+            "format": "{user-name}\u001b[38;2;102;92;84m@\u001b[1;38;2;253;248;216m{host-name}"
+        },
+        {
+            "type": "custom",
+            "format": "\u001b[38;2;102;92;84m────────────────────────────────"
+        },
+        { "type": "os",       "key": "os" },
+        { "type": "kernel",   "key": "kernel" },
+        { "type": "packages", "key": "pkgs" },
+        { "type": "wm",       "key": "wm" },
+        { "type": "terminal", "key": "term" },
+        { "type": "shell",    "key": "shell" },
+        { "type": "terminalfont", "key": "font" },
+        { "type": "uptime",   "key": "uptime" },
+        {
+            "type": "memory",
+            "key": "memory",
+            "format": "{used} / {total}"
+        },
+        {
+            "type": "custom",
+            "format": "\u001b[38;2;102;92;84m────────────────────────────────"
+        },
+        {
+            "type": "custom",
+            "format": "\u001b[38;2;73;73;73m███\u001b[38;2;102;92;84m███\u001b[38;2;168;153;132m███\u001b[38;2;213;196;161m███\u001b[38;2;235;219;178m███\u001b[38;2;253;248;216m███"
+        },
+        "break"
+    ]
+}
