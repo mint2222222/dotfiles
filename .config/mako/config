@@ -1,27 +1,28 @@
-# Gruvbox, square
-font=JetBrains Mono 11
+# Dylan Araps style: borderless dark box, centred text, no icons
+font=JetBrains Mono 10
 background-color=#282828
 text-color=#ebdbb2
-border-color=#ebdbb2
-border-size=2
+border-size=0
 border-radius=0
-width=320
-padding=10
-margin=10
+text-alignment=center
+icons=0
+anchor=top-right
+width=280
+padding=14,24
+margin=20
 default-timeout=5000
-max-icon-size=32
 
 [urgency=low]
-border-color=#504945
+text-color=#a89984
 
 [urgency=critical]
-border-color=#cc241d
+background-color=#cc241d
+text-color=#fbf1c7
 default-timeout=0
 
 [mode=do-not-disturb]
 invisible=1
 
 [app-name=volume]
-border-color=#ebdbb2
 progress-color=over #504945
 width=220

@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Clipboard history (Super+Ctrl+V): pick an entry and it is copied back, then paste with Ctrl+V
+command -v cliphist >/dev/null || { notify-send -u critical 'Clipboard history' 'cliphist is not installed: sudo dnf install cliphist'; exit 1; }
+pgrep -f 'wl-paste.*cliphist' >/dev/null || { wl-paste --type text --watch cliphist store & wl-paste --type image --watch cliphist store & } >/dev/null 2>&1
+list=$(cliphist list)
+[ -n "$list" ] || { notify-send 'Clipboard history' 'Nothing copied yet. Copy something, then try again.'; exit 0; }
+sel=$(rofi -dmenu -i -display-columns 2 -theme-str 'entry { placeholder: "Clipboard…"; } window { width: 640px; } listview { lines: 10; scrollbar: true; }' <<<"$list") || exit 0
+cliphist decode <<<"$sel" | wl-copy

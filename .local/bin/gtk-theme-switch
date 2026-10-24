@@ -1,8 +1,12 @@
 #!/usr/bin/env sh
-# gtk-theme-switch gruvbox   -> Hyprland
-# gtk-theme-switch mactahoe  -> GNOME
+# gtk-theme-switch gruvbox   -> Hyprland (Gruvbox CSS + tan Papirus folders, if installed)
+# gtk-theme-switch mactahoe  -> GNOME   (MacTahoe CSS + Adwaita icons)
 D="$HOME/.config/gtk-4.0"
 case "$1" in
-    gruvbox)  ln -sfn "$D/gtk-Gruvbox.css" "$D/gtk.css"; ln -sfn "$D/gtk-Gruvbox.css" "$D/gtk-dark.css" ;;
-    mactahoe) ln -sfn "$D/gtk-Dark.css"    "$D/gtk.css"; ln -sfn "$D/gtk-Dark.css"    "$D/gtk-dark.css" ;;
+    gruvbox)
+        ln -sfn "$D/gtk-Gruvbox.css" "$D/gtk.css"; ln -sfn "$D/gtk-Gruvbox.css" "$D/gtk-dark.css"
+        [ -d /usr/share/icons/Papirus-Dark ] && gsettings set org.gnome.desktop.interface icon-theme Papirus-Dark ;;
+    mactahoe)
+        ln -sfn "$D/gtk-Dark.css"    "$D/gtk.css"; ln -sfn "$D/gtk-Dark.css"    "$D/gtk-dark.css"
+        gsettings set org.gnome.desktop.interface icon-theme Adwaita ;;
 esac

@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Super+Alt+T: switch the current workspace between tiling and floating.
+# Floating also makes new windows there float (wsFloatRules in hyprland.lua);
+# floating windows lose their border through the "no-border-floating" rule.
+# shortcut: state lives in $XDG_RUNTIME_DIR and resets at login, like the rules do; a
+# `hyprctl reload` resets the rules but not this file, so one extra press may be needed after it.
+STATE="${XDG_RUNTIME_DIR:-/tmp}/float-workspaces"
+
+ws=$(hyprctl activeworkspace -j | python3 -I -c 'import json,sys; print(json.load(sys.stdin)["id"])')
+[[ $ws =~ ^[0-9]+$ ]] || exit 1          # special workspaces (scratchpad) have negative ids
+touch "$STATE"
+
+if grep -qx "$ws" "$STATE"; then
+    on=false action=disable label=tiling
+    sed -i "/^$ws\$/d" "$STATE"
+else
+    on=true action=enable label=floating
+    echo "$ws" >> "$STATE"
+fi
+
+# new windows: only workspaces 1-10 have a rule
+(( ws >= 1 && ws <= 10 )) && hyprctl eval "wsFloatRules[$ws]:set_enabled($on)" >/dev/null 2>&1
+
+# windows already on the workspace
+hyprctl clients -j | python3 -I -c '
+import json, sys
+ws = int(sys.argv[1])
+for c in json.load(sys.stdin):
+    if c["workspace"]["id"] == ws:
+        print(c["address"])
+' "$ws" | while read -r addr; do
+    hyprctl dispatch "hl.dsp.window.float({ action = \"$action\", window = \"address:$addr\" })" >/dev/null
+done
+
+notify-send "Workspace $ws" "$label"

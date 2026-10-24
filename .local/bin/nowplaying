@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Now-playing card (Super+Ctrl+M, or right-click the song in the bar):
+# album cover + title + artist, redrawn only when the song, play state or window size changes.
+ART="$HOME/.cache/nowplaying.jpg"
+last=""
+printf '\e[?25l'                      # hide the cursor
+stty -echo 2>/dev/null                 # it is a display, not a prompt: never show typed keys
+trap 'printf "\e[?25h"; stty echo 2>/dev/null' EXIT
+
+while :; do
+    title=$(playerctl metadata title 2>/dev/null)
+    artist=$(playerctl metadata artist 2>/dev/null)
+    url=$(playerctl metadata mpris:artUrl 2>/dev/null)
+    status=$(playerctl status 2>/dev/null)
+    cols=$(tput cols) lines=$(tput lines)
+    key="$title|$artist|$url|$status|${cols}x$lines"
+
+    if [ "$key" != "$last" ]; then
+        last=$key
+        clear
+        kitten icat --clear 2>/dev/null
+        if [ -z "$title" ]; then
+            tput cup $((lines / 2)) $(((cols - 15) / 2))
+            printf '\e[38;2;146;131;116mnothing playing\e[0m'
+        else
+            rm -f "$ART"
+            case "$url" in
+                file://*) p=${url#file://}; cp "$(printf '%b' "${p//%/\\x}")" "$ART" 2>/dev/null ;;  # decode %20 etc.
+                http*)    curl -fsSL --max-time 5 "$url" -o "$ART" 2>/dev/null ;;
+            esac
+            h=$((lines - 4))
+            [ -s "$ART" ] && kitten icat --place "${cols}x${h}@0x0" "$ART" 2>/dev/null
+            [ "$status" = Paused ] && state="  · paused" || state=""
+            tput cup $((h + 1)) 2; printf '\e[1;38;2;235;219;178m%s\e[0m' "${title:0:cols-4}"
+            tput cup $((h + 2)) 2; printf '\e[38;2;146;131;116m%s%s\e[0m' "${artist:0:cols-14}" "$state"
+        fi
+    fi
+    sleep 2
+done

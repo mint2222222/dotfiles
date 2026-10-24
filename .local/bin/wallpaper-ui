@@ -1,0 +1,281 @@
+#!/usr/bin/env python3
+"""Full-screen "paper" wallpaper screen (Super+Ctrl+Space), runs inside kitty.
+
+↑↓ moves between pictures and the setting rows, ←→ picks, Enter keeps, Esc leaves unchanged.
+Enter writes ~/.config/hypr/wallpaper.conf + the ~/.config/hypr/wallpaper link, then runs
+`wallpaper --restore`, which does the image processing and starts swaybg.
+`wallpaper-ui --selftest` checks the navigation and the settings file.
+"""
+import base64, fcntl, os, select, shutil, signal, struct, subprocess, sys, termios, tty
+from pathlib import Path
+
+HOME = Path.home()
+PICS = HOME / "Pictures/gruvbox"
+LINK = HOME / ".config/hypr/wallpaper"
+CONF = HOME / ".config/hypr/wallpaper.conf"
+THUMBS = HOME / ".cache/wallpaper-thumbs"
+EXTS = {".jpg", ".jpeg", ".png", ".webp"}
+
+# (conf key, label, [(value, text)])
+SETTINGS = [
+    ("MODE", "MOUNTED", [("fill", "fill"), ("fit", "fit"), ("center", "centre")]),
+    ("BRIGHT", "BRIGHTNESS", [("100", "100%"), ("85", "85%"), ("70", "70%"), ("55", "55%")]),
+    ("WASH", "PAPER WASH", [("0", "none"), ("15", "15%"), ("30", "30%"), ("45", "45%")]),
+    ("BLUR", "BLUR", [("none", "none"), ("soft", "soft"), ("medium", "medium"), ("strong", "strong")]),
+]
+DEFAULTS = {"BRIGHT": "100", "BLUR": "none", "WASH": "0", "MODE": "fill"}
+
+INK, DIM, BAND = "\x1b[38;2;60;56;54m", "\x1b[38;2;146;131;116m", "\x1b[48;2;235;219;178m"
+BOLD, RESET = "\x1b[1m", "\x1b[0m"
+
+
+# ---------- pure logic (tested by --selftest) ----------
+def step(index, delta, count, wrap):
+    """Move inside 0..count-1: wrap round (pictures, options) or clamp (rows)."""
+    if count <= 0:
+        return 0
+    return (index + delta) % count if wrap else max(0, min(count - 1, index + delta))
+
+
+def read_conf(path):
+    conf = dict(DEFAULTS)
+    if path.exists():
+        for line in path.read_text().splitlines():
+            key, _, val = line.partition("=")
+            valid = {v for k, _, opts in SETTINGS if k == key for v, _ in opts}
+            if val in valid:            # ignore anything we would not write ourselves
+                conf[key] = val
+    return conf
+
+
+def write_conf(path, conf):
+    path.write_text("".join(f"{k}={conf[k]}\n" for k in ("BRIGHT", "BLUR", "WASH", "MODE")))
+
+
+# ---------- terminal helpers ----------
+def at(row, col):
+    return f"\x1b[{row};{col}H"
+
+
+def cell_px():
+    """Pixel size of one terminal cell (for keeping thumbnails 16:9)."""
+    try:
+        rows, cols, xpx, ypx = struct.unpack("HHHH", fcntl.ioctl(1, termios.TIOCGWINSZ, b"\0" * 8))
+        if xpx and ypx:
+            return xpx / cols, ypx / rows
+    except OSError:
+        pass
+    return 8.0, 17.0
+
+
+def image(path, cols, rows):
+    """Draw a file with the kitty graphics protocol, scaled to cols x rows cells, cursor stays put."""
+    return f"\x1b_Ga=T,f=100,t=f,c={cols},r={rows},C=1,q=2;{base64.b64encode(str(path).encode()).decode()}\x1b\\"
+
+
+def box(top, left, width, height, heavy):
+    h, v, tl, tr, bl, br = ("━", "┃", "┏", "┓", "┗", "┛") if heavy else ("─", "│", "┌", "┐", "└", "┘")
+    out = [at(top, left) + tl + h * (width - 2) + tr]
+    out += [at(top + r, left) + v + at(top + r, left + width - 1) + v for r in range(1, height - 1)]
+    out.append(at(top + height - 1, left) + bl + h * (width - 2) + br)
+    return "".join(out)
+
+
+def thumb(pic):
+    # PNG on purpose: kitty's f=100 only decodes PNG, a JPEG is silently skipped
+    t = THUMBS / (pic.name + ".png")
+    if not t.exists():
+        THUMBS.mkdir(parents=True, exist_ok=True)
+        subprocess.run(["magick", f"{pic}[0]", "-thumbnail", "400x225^", "-gravity", "center",
+                        "-extent", "400x225", str(t)], stderr=subprocess.DEVNULL)
+    return t
+
+
+_sizes = {}
+def pixel_size(pic):
+    if pic not in _sizes:
+        r = subprocess.run(["magick", "identify", "-format", "%w × %h", f"{pic}[0]"],
+                           capture_output=True, text=True)
+        _sizes[pic] = r.stdout.strip() or "?"
+    return _sizes[pic]
+
+
+# ---------- the screen ----------
+class Screen:
+    def __init__(self):
+        self.pics = [None] + sorted(p for p in PICS.iterdir() if p.suffix.lower() in EXTS)  # None = plain paper
+        self.conf = read_conf(CONF)
+        current = LINK.resolve() if LINK.is_symlink() else None
+        self.pic = next((i for i, p in enumerate(self.pics) if p and p.resolve() == current), 0)
+        self.row = 0                      # 0 = pictures, 1.. = SETTINGS rows
+        self.scroll = 0                   # first visible picture row
+
+    def key(self, k):
+        if k in ("up", "down"):
+            self.row = step(self.row, -1 if k == "up" else 1, len(SETTINGS) + 1, wrap=False)
+        elif k in ("left", "right"):
+            d = -1 if k == "left" else 1
+            if self.row == 0:
+                self.pic = step(self.pic, d, len(self.pics), wrap=True)
+            else:
+                key, _, opts = SETTINGS[self.row - 1]
+                values = [v for v, _ in opts]
+                self.conf[key] = values[step(values.index(self.conf[key]), d, len(values), wrap=True)]
+
+    def keep(self):
+        write_conf(CONF, self.conf)
+        chosen = self.pics[self.pic]
+        if chosen is None:
+            if LINK.is_symlink():
+                LINK.unlink()
+        else:
+            tmp = LINK.with_name(".wallpaper.tmp")
+            tmp.unlink(missing_ok=True)
+            tmp.symlink_to(chosen)
+            tmp.replace(LINK)            # atomic swap, hyprlock never sees a missing link
+        # stdin too: anything still holding this terminal keeps the kitty window open after we exit
+        subprocess.Popen([str(HOME / ".local/bin/wallpaper"), "--restore"], start_new_session=True,
+                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    def draw(self):
+        cols, rows = shutil.get_terminal_size()
+        cw, ch = cell_px()
+        out = ["\x1b_Ga=d,d=A,q=2\x1b\\", "\x1b[2J", INK]
+
+        pick = self.pics[self.pic]
+
+        # top band, like the title strip of a drawing sheet
+        hint = "  ↑↓ pictures, settings · ←→ pick · enter keep · esc back"
+        out.append(at(1, 1) + BAND + INK + BOLD + " 1 >_ " + RESET + BAND + INK + "│"
+                   + hint[: cols - 13].ljust(cols - 12) + "│ 6 " + RESET + INK)
+        # bottom band: numbered cells, the chosen picture in the last one
+        seg = cols // 6
+        last = cols - seg * 5
+        name = "PAPER" if pick is None else pick.stem.upper()
+        cells = "".join(str(n).center(seg - 1) + "│" for n in range(1, 6))
+        out.append(at(rows, 1) + BAND + INK + cells + BOLD + name[: last - 2].center(last) + RESET + INK)
+        # rulers down both margins, cut into sections A-D
+        for r in range(2, rows):
+            out.append(DIM + at(r, 2) + "│" + at(r, cols - 1) + "│")
+        for i, letter in enumerate("ABCD"):
+            r = 2 + round(i * (rows - 2) / 4)
+            out.append(at(r, 1) + "─┤" + at(r, cols - 1) + "├─" + at(r + 1, 1) + letter + at(r + 1, cols) + letter + INK)
+
+        # left column: section box, big preview, details of the picked picture
+        out.append(INK + box(3, 4, 26, 4, True) + DIM + at(4, 6) + "SETTINGS · 1" + INK
+                   + at(5, 6) + BOLD + "WALLPAPER" + RESET + INK)
+        prev_r = max(3, round(24 * cw * 9 / 16 / ch))
+        out.append(DIM + box(8, 4, 26, prev_r + 2, False) + INK)
+        if pick is None:
+            out.append(at(9 + prev_r // 2, 9) + "NO PICTURE · PAPER")
+        else:
+            out.append(at(9, 5) + image(thumb(pick), 24, prev_r))
+        y = 10 + prev_r
+        out.append(at(y, 5) + BOLD + ("none" if pick is None else pick.name)[:24] + RESET + INK)
+        out.append(at(y + 1, 5) + DIM + ("plain paper colour" if pick is None else pixel_size(pick)) + INK)
+        for n, (key, label, opts) in enumerate(SETTINGS):
+            text = dict(opts)[self.conf[key]]
+            out.append(at(y + 3 + n, 5) + DIM + label.lower().ljust(12) + INK + text)
+
+        # pictures
+        left, right = 33, cols - 4
+        width = right - left
+        per_row = max(2, min(5, width // 22))
+        gap = 2
+        tile_w = (width - gap * (per_row - 1)) // per_row
+        img_r = max(3, round((tile_w - 2) * cw * 9 / 16 / ch))
+        tile_h = img_r + 2 + 2                                    # box + caption + spacing
+        settings_h = len(SETTINGS) * 2 + 1
+        fit_rows = max(1, (rows - 6 - settings_h) // tile_h)
+        sel_row = self.pic // per_row
+        self.scroll = min(max(self.scroll, sel_row - fit_rows + 1), sel_row)
+
+        where = str(PICS).replace(str(HOME), "~")
+        out.append(at(3, left) + BOLD + f"PICTURES · {where}" + RESET + INK)
+        for i, p in enumerate(self.pics):
+            r, c = divmod(i, per_row)
+            if not self.scroll <= r < self.scroll + fit_rows:
+                continue
+            top = 5 + (r - self.scroll) * tile_h
+            x = left + c * (tile_w + gap)
+            chosen = i == self.pic
+            focus = chosen and self.row == 0
+            out.append((INK if chosen else DIM) + box(top, x, tile_w, img_r + 2, focus) + INK)
+            if p is None:
+                label = "NO PICTURE · PAPER"
+                out.append(at(top + 1 + img_r // 2, x + max(1, (tile_w - len(label)) // 2)) + label[: tile_w - 2])
+            else:
+                out.append(at(top + 1, x + 1) + image(thumb(p), tile_w - 2, img_r))
+            name = "none" if p is None else p.name
+            out.append(at(top + img_r + 2, x) + (BOLD if chosen else DIM) + name[:tile_w] + RESET + INK)
+
+        # setting rows
+        y = rows - settings_h + 1
+        for n, (key, label, opts) in enumerate(SETTINGS, start=1):
+            out.append(DIM + at(y, left) + "─" * width + INK)
+            focus = self.row == n
+            line = at(y + 1, left) + (BOLD + "› " if focus else "  ") + label.ljust(14) + RESET + INK
+            for value, text in opts:
+                if value == self.conf[key]:
+                    line += (BOLD if focus else "") + f"[ {text} ]" + RESET + INK + "   "
+                else:
+                    line += DIM + f"  {text}  " + INK + "   "
+            out.append(line)
+            y += 2
+        sys.stdout.write("".join(out))
+        sys.stdout.flush()
+
+
+def read_key(fd):
+    data = os.read(fd, 1)
+    if data == b"\x1b":
+        if select.select([fd], [], [], 0.05)[0]:              # arrow keys arrive as ESC [ A..D
+            seq = os.read(fd, 2)
+            return {b"[A": "up", b"[B": "down", b"[C": "right", b"[D": "left"}.get(seq, "")
+        return "esc"
+    return {b"\r": "enter", b"\n": "enter", b"q": "esc", b"k": "up", b"j": "down", b"h": "left", b"l": "right"}.get(data, "")
+
+
+def main():
+    screen = Screen()
+    fd = sys.stdin.fileno()
+    old = termios.tcgetattr(fd)
+    signal.signal(signal.SIGWINCH, lambda *_: screen.draw())
+    sys.stdout.write("\x1b[?25l")                               # hide cursor
+    try:
+        tty.setraw(fd)
+        screen.draw()
+        while True:
+            k = read_key(fd)
+            if k == "esc":
+                break
+            if k == "enter":
+                screen.keep()
+                break
+            if k:
+                screen.key(k)
+                screen.draw()
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old)
+        sys.stdout.write("\x1b_Ga=d,d=A,q=2\x1b\\\x1b[?25h" + RESET)
+        sys.stdout.flush()
+
+
+def selftest():
+    import tempfile
+    assert step(4, 1, 5, wrap=True) == 0 and step(0, -1, 5, wrap=True) == 4      # pictures wrap
+    assert step(0, -1, 5, wrap=False) == 0 and step(4, 1, 5, wrap=False) == 4    # rows clamp
+    assert step(2, 1, 0, wrap=True) == 0                                         # empty folder
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / "wallpaper.conf"
+        assert read_conf(p) == DEFAULTS                                          # no file yet
+        conf = {"BRIGHT": "70", "BLUR": "soft", "WASH": "30", "MODE": "fit"}
+        write_conf(p, conf)
+        assert read_conf(p) == conf                                              # round trip
+        p.write_text("BRIGHT=$(rm -rf ~)\nBLUR=medium\n")
+        assert read_conf(p) == {**DEFAULTS, "BLUR": "medium"}                     # junk ignored
+    print("selftest ok")
+
+
+if __name__ == "__main__":
+    selftest() if sys.argv[1:] == ["--selftest"] else main()

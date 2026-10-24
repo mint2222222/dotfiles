@@ -13,6 +13,8 @@ configuration {
     bg:        #282828;
     fg:        #d4be98;
     accent:    #7daea3;
+    yellow:    #d8a657;   /* ">" prompt block */
+    green:     #a9b665;   /* selected-row bar */
     faded:     #d4be9894;   /* placeholder text, 58% */
     selected:  #d4be9814;   /* selected row, 8% */
 
@@ -41,8 +43,20 @@ mainbox {
 }
 
 inputbar {
-    children: [ entry ];
+    children: [ textbox-prompt, entry ];
+    spacing:  12px;
     padding:  6px 4px;
+}
+
+/* fixed ">" block, so every rofi menu gets it without passing -p */
+textbox-prompt {
+    str:              ">";
+    expand:           false;
+    font:             "JetBrains Mono Bold 14";
+    background-color: @yellow;
+    text-color:       @bg;
+    padding:          4px 10px;
+    vertical-align:   0.5;
 }
 
 entry {
@@ -83,7 +97,7 @@ element selected.normal,
 element selected.active,
 element selected.urgent {
     background-color: @selected;
-    border-color:     @selected;
+    border-color:     @green;
     text-color:       @accent;
 }
 

@@ -1,13 +1,17 @@
-// dwm-style bar: tags | layout | title ............ status
+// thin text-only bar: W: ( tags ) title ...... clock ...... music · status
 {
     "layer": "top",
     "position": "top",
     "height": 24,
     "spacing": 0,
 
-    "modules-left":   ["hyprland/workspaces", "hyprland/window"],
+    "modules-left":   ["custom/ws-open", "hyprland/workspaces", "custom/ws-close", "hyprland/window"],
     "modules-center": ["clock"],
-    "modules-right":  ["cpu", "memory", "wireplumber", "network", "battery", "tray"],
+    "modules-right":  ["mpris", "cpu", "memory", "wireplumber", "network", "battery", "tray"],
+
+    // GTK CSS can't add text, so the "W: (" and ")" around the tags are tiny modules
+    "custom/ws-open":  { "format": "M: (", "tooltip": false },
+    "custom/ws-close": { "format": ")",    "tooltip": false },
 
     "hyprland/workspaces": {
         "format": "{id}",
@@ -17,21 +21,28 @@
         "on-scroll-down": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e+1\" })'"
     },
     "hyprland/window": {
-        "format": " {} ",
-        "max-length": 80,
+        "format": "{}",
+        "max-length": 60,
         "separate-outputs": true
+    },
+    "mpris": {
+        "format": "<span color='#928374'>♪</span> {artist} – {title}",
+        "format-paused": "<span color='#928374'>♪ {artist} – {title}</span>",
+        "max-length": 40,
+        "on-click": "playerctl play-pause",
+        "on-click-right": "kitty --class nowplaying ~/.local/bin/nowplaying"
     },
     "cpu": {
         "interval": 5,
-        "format": "CPU {usage}%"
+        "format": "<span color='#928374'>cpu</span> {usage}%"
     },
     "memory": {
         "interval": 10,
-        "format": "MEM {used:0.1f}G"
+        "format": "<span color='#928374'>mem</span> {used:0.1f}G"
     },
     "wireplumber": {
-        "format": "VOL {volume}%",
-        "format-muted": "VOL MUTE",
+        "format": "<span color='#928374'>vol</span> {volume}%",
+        "format-muted": "<span color='#928374'>vol</span> mute",
         "on-click": "~/.local/bin/volume mute",
         "on-scroll-up": "~/.local/bin/volume up 5",
         "on-scroll-down": "~/.local/bin/volume down 5",
@@ -40,17 +51,17 @@
     },
     "network": {
         "interval": 10,
-        "format-wifi": "NET {essid}",
-        "format-ethernet": "NET wired",
-        "format-disconnected": "NET off",
+        "format-wifi": "<span color='#928374'>net</span> {essid}",
+        "format-ethernet": "<span color='#928374'>net</span> wired",
+        "format-disconnected": "<span color='#928374'>net</span> off",
         "tooltip-format": "{ifname} {ipaddr}"
     },
     "battery": {
         "interval": 30,
         "states": { "warning": 25, "critical": 10 },
-        "format": "BAT {capacity}%",
-        "format-charging": "BAT {capacity}%+",
-        "format-plugged": "BAT {capacity}%+"
+        "format": "<span color='#928374'>bat</span> {capacity}%",
+        "format-charging": "<span color='#928374'>bat</span> {capacity}%+",
+        "format-plugged": "<span color='#928374'>bat</span> {capacity}%+"
     },
     "clock": {
         "interval": 30,
